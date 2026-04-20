@@ -1,0 +1,83 @@
+const { Client, GatewayIntentBits, AuditLogEvent } = require("discord.js");
+
+// ===== CONFIG =====
+const SUPERUSER_ID = "1408086232948277370"; // allowed webhook creator
+const BOT_TOKEN = "PASTE_YOUR_BOT_TOKEN_HERE";
+const MAX_OFFENSES = 3;
+// ==================
+
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds]
+});
+
+// In-memory offense tracking
+// Map<guildId, Map<userId, offenseCount>>
+const offenses = new Map();
+
+client.once("ready", () => {
+    console.log(`✅ Logged in as ${client.user.tag}`);
+});
+
+client.on("webhooksUpdate", async (channel) => {
+    try {
+        const guild = channel.guild;
+        if (!guild) return;
+
+        const logs = await guild.fetchAuditLogs({
+            type: AuditLogEvent.WebhookCreate,
+            limit: 1
+        });
+
+        const entry = logs.entries.first();
+        if (!entry) return;
+
+        const { executor, target } = entry;
+        if (!executor || !target) return;
+
+        // Ignore bot itself
+        if (executor.id === client.user.id) return;
+
+        // Allow superuser
+        if (executor.id === SUPERUSER_ID) {
+            console.log(`✔ Webhook allowed (superuser): ${executor.tag}`);
+            return;
+        }
+
+        // Delete webhook immediately
+        await target.delete("Unauthorized webhook creation")
+            .catch(() => null);
+
+        // Init guild map
+        if (!offenses.has(guild.id)) {
+            offenses.set(guild.id, new Map());
+        }
+
+        const guildOffenses = offenses.get(guild.id);
+        const count = (guildOffenses.get(executor.id) || 0) + 1;
+        guildOffenses.set(executor.id, count);
+
+        console.log(
+            `❌ Unauthorized webhook by ${executor.tag} (${count}/${MAX_OFFENSES})`
+        );
+
+        // Fetch member
+        const member = await guild.members.fetch(executor.id).catch(() => null);
+        if (!member) return;
+
+        // Kick on 3rd offense
+        if (count >= MAX_OFFENSES) {
+            await member.kick("3 unauthorized webhook creations")
+                .catch(() => null);
+
+            console.log(`🚨 ${executor.tag} was KICKED`);
+
+            // Reset offenses after kick
+            guildOffenses.delete(executor.id);
+        }
+
+    } catch (err) {
+        console.error("Webhook protection error:", err);
+    }
+});
+
+client.login(BOT_TOKEN);
