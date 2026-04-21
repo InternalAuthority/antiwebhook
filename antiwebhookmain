@@ -1,35 +1,36 @@
-// Code update to include the following:
-// - Add missing intents (DirectMessages, GuildMembers)
-// - Update bot status to "Hail Authority .gg/auths"
-// - Ensure multi-server support
-// - Add comprehensive logging
+const { Client, GatewayIntentBits } = require('discord.js');
 
-// Example implementation
-const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
-
+// Create a new client instance
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.DirectMessages,
-        // add other intents as necessary
-    ]
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+    ],
 });
 
+// Set the presence status of the bot
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
     client.user.setPresence({
-        activities: [{
-            name: 'Hail Authority .gg/auths',
-            type: ActivityType.Playing,
-        }],
-        status: 'online'
+        activities: [{ name: 'Monitoring!', type: 'WATCHING' }],
+        status: 'online',
     });
 });
 
-client.on('guildCreate', guild => {
-    console.log(`Joined a new guild: ${guild.name}`);
-    // Additional logic for multi-server support here
+// Log when a guild is created
+client.on('guildCreate', (guild) => {
+    console.log(`Joined a new guild: ${guild.name} (id: ${guild.id})`);
 });
 
-client.login('your-token-here');
+// Error handling
+client.on('error', (error) => {
+    console.error('WebSocket Error:', error);
+});
+
+client.on('warn', (info) => {
+    console.warn('Warning:', info);
+});
+
+// Login to Discord with your app's token
+client.login('YOUR_BOT_TOKEN');
