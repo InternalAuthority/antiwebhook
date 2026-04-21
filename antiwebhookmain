@@ -10,9 +10,9 @@ const client = new Client({
 });
 
 // Set the presence status of the bot
-client.once('clientReady', () => {
-    console.log(`✅ Logged in as ${client.user.tag}!`);
-    client.user.setPresence({
+client.once('clientReady', (c) => {
+  console.log(`Ready! Logged in as ${c.user.tag}`);
+});
         activities: [{ name: 'Hail Authority .gg/auths', type: ActivityType.Watching }],
         status: 'online',
     });
