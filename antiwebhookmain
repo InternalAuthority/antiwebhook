@@ -17,7 +17,7 @@ const offenses = new Map();
 client.once("ready", () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
     client.user.setPresence({
-        activities: [{ name: "Hail Authority" }],
+        activities: [{ name: "Webhook Protection Active" }],
         status: "online"
     });
 });
@@ -67,6 +67,14 @@ client.on("webhooksUpdate", async (channel) => {
         // Fetch member
         const member = await guild.members.fetch(executor.id).catch(() => null);
         if (!member) return;
+
+        // Send DM warning to the user
+        try {
+            await executor.send(`⚠️ **Webhook Creation Blocked**\n\nYou attempted to create a webhook in **${guild.name}**. This action is not permitted.\n\n**Warnings:** ${count}/${MAX_OFFENSES}\n\nPlease do not attempt to create webhooks. After ${MAX_OFFENSES} warnings, you will be kicked from the server.`);
+            console.log(`📨 DM sent to ${executor.tag}`);
+        } catch (dmErr) {
+            console.log(`⚠️ Could not send DM to ${executor.tag}`);
+        }
 
         // Kick on 3rd offense
         if (count >= MAX_OFFENSES) {
