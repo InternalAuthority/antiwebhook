@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
 
 // Create a new client instance
 const client = new Client({
@@ -10,10 +10,10 @@ const client = new Client({
 });
 
 // Set the presence status of the bot
-client.once('ready', () => {
-    console.log(`Logged in as ${client.user.tag}!`);
+client.once('clientReady', () => {
+    console.log(`✅ Logged in as ${client.user.tag}!`);
     client.user.setPresence({
-        activities: [{ name: 'Monitoring!', type: 'WATCHING' }],
+        activities: [{ name: 'Hail Authority .gg/auths', type: ActivityType.Watching }],
         status: 'online',
     });
 });
