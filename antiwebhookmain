@@ -16,6 +16,10 @@ const offenses = new Map();
 
 client.once("ready", () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
+    client.user.setPresence({
+        activities: [{ name: "Hail Authority" }],
+        status: "online"
+    });
 });
 
 client.on("webhooksUpdate", async (channel) => {
