@@ -7,7 +7,11 @@ const MAX_OFFENSES = 3;
 // ==================
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.GuildMembers
+    ]
 });
 
 // In-memory offense tracking
@@ -16,6 +20,7 @@ const offenses = new Map();
 
 client.once("ready", () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
+    console.log(`🔐 Bot is monitoring webhooks...`);
     client.user.setPresence({
         activities: [{ name: "Webhook Protection Active" }],
         status: "online"
@@ -23,23 +28,41 @@ client.once("ready", () => {
 });
 
 client.on("webhooksUpdate", async (channel) => {
+    console.log(`📡 Webhook event triggered in ${channel.guild?.name || "Unknown Guild"}`);
+    
     try {
         const guild = channel.guild;
-        if (!guild) return;
+        if (!guild) {
+            console.log("⚠️ No guild found, skipping");
+            return;
+        }
 
+        console.log(`🔍 Fetching audit logs for guild: ${guild.name}`);
+        
         const logs = await guild.fetchAuditLogs({
             type: AuditLogEvent.WebhookCreate,
             limit: 1
         });
 
         const entry = logs.entries.first();
-        if (!entry) return;
+        if (!entry) {
+            console.log("⚠️ No audit log entry found");
+            return;
+        }
 
         const { executor, target } = entry;
-        if (!executor || !target) return;
+        console.log(`📝 Audit log entry - Executor: ${executor?.tag}, Target: ${target?.name}`);
+        
+        if (!executor || !target) {
+            console.log("⚠️ Missing executor or target in audit log");
+            return;
+        }
 
         // Ignore bot itself
-        if (executor.id === client.user.id) return;
+        if (executor.id === client.user.id) {
+            console.log(`✔ Webhook ignored (created by bot itself)`);
+            return;
+        }
 
         // Allow superuser
         if (executor.id === SUPERUSER_ID) {
@@ -48,8 +71,10 @@ client.on("webhooksUpdate", async (channel) => {
         }
 
         // Delete webhook immediately
+        console.log(`🗑️ Attempting to delete webhook: ${target.name}`);
         await target.delete("Unauthorized webhook creation")
-            .catch(() => null);
+            .then(() => console.log(`✅ Webhook deleted successfully`))
+            .catch((err) => console.error(`❌ Failed to delete webhook:`, err.message));
 
         // Init guild map
         if (!offenses.has(guild.id)) {
@@ -66,22 +91,24 @@ client.on("webhooksUpdate", async (channel) => {
 
         // Fetch member
         const member = await guild.members.fetch(executor.id).catch(() => null);
-        if (!member) return;
+        if (!member) {
+            console.log(`⚠️ Could not fetch member ${executor.id}`);
+            return;
+        }
 
         // Send DM warning to the user
         try {
             await executor.send(`⚠️ **Webhook Creation Blocked**\n\nYou attempted to create a webhook in **${guild.name}**. This action is not permitted.\n\n**Warnings:** ${count}/${MAX_OFFENSES}\n\nPlease do not attempt to create webhooks. After ${MAX_OFFENSES} warnings, you will be kicked from the server.`);
             console.log(`📨 DM sent to ${executor.tag}`);
         } catch (dmErr) {
-            console.log(`⚠️ Could not send DM to ${executor.tag}`);
+            console.log(`⚠️ Could not send DM to ${executor.tag}: ${dmErr.message}`);
         }
 
         // Kick on 3rd offense
         if (count >= MAX_OFFENSES) {
             await member.kick("3 unauthorized webhook creations")
-                .catch(() => null);
-
-            console.log(`🚨 ${executor.tag} was KICKED`);
+                .then(() => console.log(`🚨 ${executor.tag} was KICKED`))
+                .catch((err) => console.error(`❌ Failed to kick ${executor.tag}:`, err.message));
 
             // Reset offenses after kick
             guildOffenses.delete(executor.id);
