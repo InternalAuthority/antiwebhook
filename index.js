@@ -2,8 +2,6 @@ const {
     Client,
     GatewayIntentBits,
     AuditLogEvent,
-    PermissionsBitField,
-    ChannelType,
 } = require("discord.js");
 const fs   = require("fs");
 const path = require("path");
@@ -76,7 +74,6 @@ client.once("ready", () => {
 //   !whitelist @SomeUser
 //
 // Only the SUPERUSER_ID may run this command.
-// The bot must have Manage Webhooks permission in the target channel.
 // ─────────────────────────────────────────────────────────────────────────────
 client.on("messageCreate", async (message) => {
     // Ignore bots and DMs
@@ -125,41 +122,17 @@ client.on("messageCreate", async (message) => {
         );
     }
 
-    // ── Bot permission check ─────────────────────────────────────────────────
-    const botMember = message.guild.members.me;
-    if (!message.channel.permissionsFor(botMember).has(PermissionsBitField.Flags.ManageWebhooks)) {
-        return message.reply(
-            "⚠️ I need the **Manage Webhooks** permission in this channel to create a webhook."
-        );
-    }
-
-    // ── Create webhook ───────────────────────────────────────────────────────
-    let webhook;
-    try {
-        webhook = await message.channel.createWebhook({
-            name:   `${targetUser.username}-whitelisted`,
-            reason: `Whitelisted by superuser ${message.author.tag}`,
-        });
-    } catch (err) {
-        console.error("Webhook creation error:", err);
-        return message.reply("❌ Failed to create webhook. Check my permissions and try again.");
-    }
-
     // ── Persist to whitelist ─────────────────────────────────────────────────
     whitelist.add(targetId);
     saveWhitelist(whitelist);
 
     console.log(
-        `✅ ${message.author.tag} whitelisted ${targetUser.tag} (${targetId}) ` +
-        `and created webhook "${webhook.name}" in #${message.channel.name}`
+        `✅ ${message.author.tag} whitelisted ${targetUser.tag} (${targetId})`
     );
 
     // ── Confirm ──────────────────────────────────────────────────────────────
     return message.reply(
-        `✅ **${targetUser.tag}** (\`${targetId}\`) has been whitelisted.\n` +
-        `🔗 Webhook created: **${webhook.name}**\n` +
-        `📎 URL: \`${webhook.url}\`\n` +
-        `📌 Channel: <#${message.channel.id}>`
+        `✅ **${targetUser.tag}** (\`${targetId}\`) has been whitelisted.`
     );
 });
 
