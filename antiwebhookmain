@@ -5,7 +5,7 @@
 // - Add comprehensive logging
 
 // Example implementation
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
 
 const client = new Client({
     intents: [
@@ -18,7 +18,13 @@ const client = new Client({
 
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
-    client.user.setActivity('Hail Authority .gg/auths');
+    client.user.setPresence({
+        activities: [{
+            name: 'Hail Authority .gg/auths',
+            type: ActivityType.Playing,
+        }],
+        status: 'online'
+    });
 });
 
 client.on('guildCreate', guild => {
